@@ -1,0 +1,35 @@
+{
+  "source_file": "historian_60s (1).csv",
+  "split_strategy": "chronological_70_15_15",
+  "total_rows": 129600,
+  "columns": 91,
+  "splits": {
+    "train": {
+      "file": "training/splits/train_70.csv",
+      "ratio": 0.7,
+      "rows": 90720,
+      "start_timestamp": "2024-03-01 06:00:00+00:00",
+      "end_timestamp": "2024-05-03 05:59:00+00:00",
+      "missing_cells": 10760,
+      "rows_with_missing": 715
+    },
+    "validation": {
+      "file": "training/splits/val_15.csv",
+      "ratio": 0.15,
+      "rows": 19440,
+      "start_timestamp": "2024-05-03 06:00:00+00:00",
+      "end_timestamp": "2024-05-16 17:59:00+00:00",
+      "missing_cells": 3495,
+      "rows_with_missing": 255
+    },
+    "test": {
+      "file": "training/splits/test_15.csv",
+      "ratio": 0.15,
+      "rows": 19440,
+      "start_timestamp": "2024-05-16 18:00:00+00:00",
+      "end_timestamp": "2024-05-30 05:59:00+00:00",
+      "missing_cells": 2460,
+      "rows_with_missing": 123
+    }
+  }
+}
