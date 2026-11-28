@@ -7,7 +7,7 @@ A full-stack web app for the [ChemicalE](https://github.com/Hashwar-11/ChemicalE
   training scripts: PCA T²+Q, LSTM Autoencoder, Local Outlier Factor and Isolation Forest. No scikit-learn or PyTorch needed.
 - **Frontend:** React + TypeScript + Vite + Recharts. Includes a model leaderboard, an interactive fault-detection view,
   root-cause tag contributions and per-model metrics.
-- **Deploy:** Vercel (frontend on the CDN + backend as a Python serverless function) **or** a single Docker container.
+- **Deploy:** Vercel (FastAPI framework preset: one Python function, React build served from the CDN) **or** a single Docker container.
 
 The backend's test suite checks that live scoring reproduces the training pipeline: the full test split yields
 **11 / 12 / 19 / 26** fault events for PCA / LSTM-AE / LOF / IF, matching the project README.
@@ -31,9 +31,8 @@ Fault events use the same rules as training: alarms of 2 min or less are dropped
 
 ```
 tk101-app/
-├── api/index.py              # Vercel serverless entrypoint (imports backend/app)
-├── vercel.json               # Vercel build + function + /api rewrite config
-├── requirements.txt          # Python deps for the Vercel function
+├── pyproject.toml            # Vercel: Python deps, entrypoint, frontend build script
+├── vercel.json               # Vercel: function duration + excluded files
 ├── Dockerfile                # single container: API + built frontend
 ├── docker-compose.yml
 ├── backend/
@@ -80,13 +79,17 @@ The same image runs on Railway, Render, Fly.io or Google Cloud Run. Point the ho
 
 ## Deploy to Vercel
 
-> Vercel does not run Docker containers. Instead, it serves `frontend/dist` from its CDN and runs `api/index.py`
-> as a Python serverless function. The repo is already configured for this; nothing needs to change.
+Vercel detects this repo as a **FastAPI** project and deploys it as a single Vercel Function. `pyproject.toml` sets up everything:
+- `tool.vercel.entrypoint`: the app lives at `backend/app/main.py`.
+- `tool.vercel.scripts.build`: builds the React dashboard into `frontend/dist`.
+- `app.frontend("/")` in `main.py`: Vercel serves that build from its CDN. `/api/*` goes to the function.
+
+Vercel does not run the Dockerfile; that is for local use and container hosts.
 
 **Option A: GitHub import (recommended)**
-1. Push this folder to a GitHub repository.
-2. On [vercel.com/new](https://vercel.com/new), import the repo.
-3. Leave **Root Directory** as the repo root and **Framework Preset** as *Other*. Build settings come from `vercel.json`.
+1. Push this repo to GitHub.
+2. On [vercel.com/new](https://vercel.com/new), import it. Framework Preset should show **FastAPI** (select it if not).
+3. Leave Root Directory as the repo root. Leave the Build, Output and Install Command overrides **off**.
 4. Click **Deploy**. Every push to `main` redeploys automatically.
 
 **Option B: Vercel CLI**
@@ -100,6 +103,7 @@ vercel --prod   # production deploy
 - Request bodies are capped at **4.5 MB**, so CSV uploads are limited to about 4–5 days of 1-minute data.
   The bundled test split has no limit, since it runs server-side. For larger files, use the Docker deployment.
 - `maxDuration` is set to 60 s. A full 13.5-day *Compare all* run takes about 2 s.
+- Python 3.12 (set by `requires-python` in `pyproject.toml`).
 
 Optional environment variables:
 
@@ -107,7 +111,7 @@ Optional environment variables:
 | --- | --- | --- | --- |
 | `VITE_API_URL` | frontend build | *(same origin)* | Point the UI at a backend on another domain (e.g. Vercel frontend + Railway backend) |
 | `VITE_MAX_UPLOAD_MB` | frontend build | `4` | Client-side upload size check |
-| `MAX_UPLOAD_MB` | backend | `25` (Docker) / `4.4` (Vercel) | Server-side upload limit |
+| `MAX_UPLOAD_MB` | backend | `25` (Docker) / `4.4` (on Vercel, auto) | Server-side upload limit |
 | `CORS_ORIGINS` | backend | `*` | Comma-separated allowed origins |
 
 ---

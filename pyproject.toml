@@ -1,0 +1,24 @@
+# Vercel deployment config (FastAPI framework preset).
+# Docker / local dev use backend/requirements.txt instead.
+[project]
+name = "tk101-fault-detection-app"
+version = "1.0.0"
+description = "TK-101 hold tank fault detection and root-cause analysis"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.165,<1",
+    "numpy>=2.0,<3",
+    "python-multipart>=0.0.34",
+]
+
+[tool.vercel]
+# FastAPI instance `app` in backend/app/main.py
+entrypoint = "backend.app.main:app"
+
+[tool.vercel.scripts]
+# Builds the React dashboard into frontend/dist; app.frontend() serves it from the CDN
+build = "cd frontend && npm ci --no-audit --no-fund && npm run build"
+
+[tool.vercel.fastapi.static]
+# Frontend files are served from the CDN only, keeping the function bundle small
+exclude = true

@@ -2,8 +2,6 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi.staticfiles import StaticFiles
-
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
@@ -12,7 +10,8 @@ from pydantic import BaseModel, Field
 from .service import Engine, InputError
 
 ModelKey = Literal["pca_t2_q", "lstm_autoencoder", "local_outlier_factor", "isolation_forest", "all"]
-MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "25"))
+# Vercel caps request bodies at 4.5 MB; Docker/local allow more
+MAX_UPLOAD_MB = float(os.environ.get("MAX_UPLOAD_MB", "4.4" if os.environ.get("VERCEL") else "25"))
 
 app = FastAPI(
     title="TK-101 Fault Detection API",
@@ -133,8 +132,18 @@ def template_csv():
     )
 
 
-# In the Docker image the built React app is served from the same container.
-# (On Vercel the frontend is served by Vercel's CDN instead, so STATIC_DIR is unset.)
-_static = os.environ.get("STATIC_DIR")
-if _static and Path(_static).is_dir():
-    app.mount("/", StaticFiles(directory=_static, html=True), name="frontend")
+def _frontend_dir() -> str | None:
+    """Built React app: STATIC_DIR in Docker, frontend/dist on Vercel or locally."""
+    if os.environ.get("STATIC_DIR"):
+        return os.environ["STATIC_DIR"] if Path(os.environ["STATIC_DIR"]).is_dir() else None
+    if Path("frontend/dist").is_dir():  # Vercel runs from the project root
+        return "frontend/dist"
+    repo_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    return str(repo_dist) if repo_dist.is_dir() else None
+
+
+# Serve the React build for every non-/api path. API routes always take priority.
+# On Vercel these files are promoted to the CDN at build time.
+_frontend = _frontend_dir()
+if _frontend:
+    app.frontend("/", directory=_frontend)
